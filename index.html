@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SVG Optimizer</title>
+<meta name="description" content="Strip and minify SVG markup in your browser. No upload, no network, nothing leaves your machine.">
+<link rel="canonical" href="https://0xelitesystem.github.io/svg-optimizer/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SVG Optimizer">
+<meta property="og:description" content="Strip and minify SVG markup in your browser. No upload, no network, nothing leaves your machine.">
+<meta property="og:url" content="https://0xelitesystem.github.io/svg-optimizer/">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"SVG Optimizer","applicationCategory":"DeveloperApplication","operatingSystem":"Any (browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://0xelitesystem.github.io/svg-optimizer/","author":{"@type":"Person","name":"0xelitesystem","url":"https://elitesystem.ai"}}
+</script>
+<style>
+  :root{
+    --bg:#f6f7f9;
+    --panel:#ffffff;
+    --fg:#1a1d23;
+    --muted:#5b6472;
+    --border:#dde1e8;
+    --border-strong:#c7cdd8;
+    --accent:#2563eb;
+    --accent-fg:#ffffff;
+    --ok:#0f8a45;
+    --err:#c02626;
+    --err-bg:#fdeaea;
+    --code-bg:#f0f2f5;
+    --check:#e9ecf1;
+    --radius:10px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0e1116;
+      --panel:#161b22;
+      --fg:#e6edf3;
+      --muted:#9aa4b2;
+      --border:#2a313c;
+      --border-strong:#3a4250;
+      --accent:#4c8dff;
+      --accent-fg:#0b0f14;
+      --ok:#3fb950;
+      --err:#ff6b60;
+      --err-bg:#2a1717;
+      --code-bg:#0b0f14;
+      --check:#20262f;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--fg);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 20px 56px;}
+  header{margin-bottom:20px;}
+  h1{font-size:24px;margin:0 0 4px;letter-spacing:-0.01em;}
+  .tagline{color:var(--muted);margin:0;font-size:15px;}
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-top:16px;
+  }
+  @media (max-width:820px){ .grid{grid-template-columns:1fr;} }
+  .field-label{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:13px;
+    font-weight:600;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  textarea{
+    width:100%;
+    min-height:260px;
+    resize:vertical;
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:1.45;
+    color:var(--fg);
+    background:var(--code-bg);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:12px;
+    tab-size:2;
+  }
+  textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  textarea[readonly]{color:var(--muted);}
+  .options{
+    margin-top:16px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 20px;
+    align-items:center;
+  }
+  .opt{display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;}
+  .opt input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;}
+  .opt .note{color:var(--muted);font-size:12px;}
+  .precision{display:flex;align-items:center;gap:7px;font-size:14px;}
+  .precision input[type=number]{
+    width:56px;
+    font-family:var(--mono);
+    font-size:13px;
+    padding:5px 6px;
+    color:var(--fg);
+    background:var(--code-bg);
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+  button{
+    font-family:var(--sans);
+    font-size:14px;
+    font-weight:600;
+    padding:9px 15px;
+    border-radius:8px;
+    border:1px solid var(--border-strong);
+    background:var(--panel);
+    color:var(--fg);
+    cursor:pointer;
+  }
+  button:hover{border-color:var(--accent);}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);}
+  button:disabled{opacity:0.45;cursor:not-allowed;}
+  button:disabled:hover{border-color:var(--border-strong);}
+  .dropzone{
+    margin-top:16px;
+    border:1.5px dashed var(--border-strong);
+    border-radius:8px;
+    padding:14px;
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    transition:background .12s,border-color .12s;
+  }
+  .dropzone.drag{border-color:var(--accent);background:var(--code-bg);}
+  .dropzone label{color:var(--accent);cursor:pointer;font-weight:600;text-decoration:underline;}
+  .dropzone input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;}
+  .error{
+    display:none;
+    margin-top:16px;
+    padding:12px 14px;
+    border-radius:8px;
+    background:var(--err-bg);
+    color:var(--err);
+    border:1px solid var(--err);
+    font-size:14px;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .error.show{display:block;}
+  .stats{
+    display:none;
+    margin-top:16px;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .stats.show{display:flex;}
+  .stat{
+    flex:1 1 140px;
+    background:var(--code-bg);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+  }
+  .stat .k{font-size:12px;color:var(--muted);}
+  .stat .v{font-size:18px;font-weight:700;font-family:var(--mono);margin-top:2px;}
+  .stat .v.good{color:var(--ok);}
+  .stat .v.bad{color:var(--err);}
+  .previews{
+    display:none;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-top:16px;
+  }
+  .previews.show{display:grid;}
+  @media (max-width:560px){ .previews.show{grid-template-columns:1fr;} }
+  .preview-box .field-label{margin-bottom:6px;}
+  .preview{
+    border:1px solid var(--border);
+    border-radius:8px;
+    height:180px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    background-image:
+      linear-gradient(45deg,var(--check) 25%,transparent 25%),
+      linear-gradient(-45deg,var(--check) 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,var(--check) 75%),
+      linear-gradient(-45deg,transparent 75%,var(--check) 75%);
+    background-size:16px 16px;
+    background-position:0 0,0 8px,8px -8px,-8px 0;
+  }
+  .preview img{max-width:100%;max-height:100%;display:block;}
+  footer{margin-top:32px;color:var(--muted);font-size:13px;}
+  footer a{color:var(--accent);text-decoration:none;}
+  footer a:hover{text-decoration:underline;}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SVG Optimizer</h1>
+    <p class="tagline">Strip and minify SVG markup in your browser. No upload, no network, nothing leaves your machine.</p>
+  </header>
+
+  <div class="panel">
+    <div class="grid">
+      <div>
+        <div class="field-label">
+          <label for="input">SVG input</label>
+          <span id="in-size"></span>
+        </div>
+        <textarea id="input" spellcheck="false" placeholder="Paste SVG markup here, drop a .svg file below, or load the sample."></textarea>
+      </div>
+      <div>
+        <div class="field-label">
+          <label for="output">Optimized output</label>
+          <span id="out-size"></span>
+        </div>
+        <textarea id="output" spellcheck="false" readonly placeholder="Optimized SVG appears here."></textarea>
+      </div>
+    </div>
+
+    <div class="options" role="group" aria-label="Optimization options">
+      <label class="opt"><input type="checkbox" id="opt-comments" checked> Remove comments</label>
+      <label class="opt"><input type="checkbox" id="opt-metadata" checked> Remove metadata</label>
+      <label class="opt"><input type="checkbox" id="opt-editor" checked> Remove editor data <span class="note">(Inkscape, Illustrator, Sketch)</span></label>
+      <label class="opt"><input type="checkbox" id="opt-whitespace" checked> Collapse whitespace</label>
+      <label class="opt"><input type="checkbox" id="opt-empty" checked> Remove empty groups</label>
+      <label class="opt"><input type="checkbox" id="opt-style" checked> Minify styles</label>
+      <label class="opt"><input type="checkbox" id="opt-titledesc"> Remove title and desc <span class="note">(hurts accessibility)</span></label>
+      <span class="precision">
+        <label class="opt"><input type="checkbox" id="opt-round" checked> Round numbers to</label>
+        <input type="number" id="opt-precision" value="3" min="0" max="8" aria-label="Decimal places">
+        <span class="note">decimals</span>
+      </span>
+    </div>
+
+    <div class="toolbar">
+      <button type="button" class="primary" id="btn-optimize">Optimize</button>
+      <button type="button" id="btn-copy" disabled>Copy output</button>
+      <button type="button" id="btn-download" disabled>Download .svg</button>
+      <button type="button" id="btn-sample">Load sample</button>
+      <button type="button" id="btn-clear">Clear</button>
+    </div>
+
+    <div class="dropzone" id="dropzone">
+      Drop a <code>.svg</code> file here, or <label for="file">choose a file</label>.
+      <input type="file" id="file" accept=".svg,image/svg+xml">
+    </div>
+
+    <div class="error" id="error" role="alert"></div>
+
+    <div class="stats" id="stats" aria-live="polite">
+      <div class="stat"><div class="k">Original</div><div class="v" id="stat-orig">0 B</div></div>
+      <div class="stat"><div class="k">Optimized</div><div class="v" id="stat-opt">0 B</div></div>
+      <div class="stat"><div class="k">Saved</div><div class="v" id="stat-saved">0 B</div></div>
+    </div>
+
+    <div class="previews" id="previews">
+      <div class="preview-box">
+        <div class="field-label">Before</div>
+        <div class="preview"><img id="prev-before" alt="Rendered original SVG"></div>
+      </div>
+      <div class="preview-box">
+        <div class="field-label">After</div>
+        <div class="preview"><img id="prev-after" alt="Rendered optimized SVG"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Runs entirely in your browser. Open source under the MIT license.
+    <a href="https://github.com/0xelitesystem/svg-optimizer">Source on GitHub</a>.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+
+  // Elements whose text content carries significant whitespace.
+  var TEXT_ELEMENTS = {text:1,tspan:1,textPath:1,tref:1,title:1,desc:1,style:1,pre:1,
+    flowRoot:1,flowPara:1,flowSpan:1,flowDiv:1,altGlyph:1};
+
+  // Attributes that hold a single length or numeric value.
+  var NUM_ATTRS = {x:1,y:1,x1:1,y1:1,x2:1,y2:1,cx:1,cy:1,r:1,rx:1,ry:1,width:1,height:1,
+    dx:1,dy:1,fx:1,fy:1,fr:1,offset:1,opacity:1,"fill-opacity":1,"stroke-opacity":1,
+    "stop-opacity":1,"stroke-width":1,"stroke-dashoffset":1,"stroke-miterlimit":1,
+    "font-size":1,"letter-spacing":1,"word-spacing":1,"baseline-shift":1,startOffset:1};
+
+  // Attributes that hold lists of numbers (path data, transforms, points).
+  var LIST_ATTRS = {d:1,points:1,viewBox:1,transform:1,gradientTransform:1,
+    patternTransform:1,"stroke-dasharray":1};
+
+  var XMLNS_NS = "http://www.w3.org/2000/xmlns/";
+
+  function isEditorNS(uri){
+    if(!uri){ return false; }
+    if(uri.indexOf("http://ns.adobe.com/") === 0){ return true; }
+    return uri === "http://www.inkscape.org/namespaces/inkscape"
+        || uri === "http://sodipodi.sourceforge.net/DTD/sodipodi-0.0.dtd"
+        || uri === "http://www.bohemiancoding.com/sketch/ns";
+  }
+
+  function allElements(root){
+    var list = Array.prototype.slice.call(root.getElementsByTagName("*"));
+    list.unshift(root);
+    return list;
+  }
+
+  function byteLen(s){
+    if(typeof TextEncoder !== "undefined"){
+      return new TextEncoder().encode(s).length;
+    }
+    return unescape(encodeURIComponent(s)).length;
+  }
+
+  function roundNumbers(val, prec){
+    return val.replace(/-?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g, function(m){
+      if(m.indexOf(".") === -1 && m.indexOf("e") === -1 && m.indexOf("E") === -1){
+        return m; // plain integer, leave as is
+      }
+      var n = parseFloat(m);
+      if(!isFinite(n)){ return m; }
+      return String(parseFloat(n.toFixed(prec)));
+    });
+  }
+
+  function removeComments(root){
+    var walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_COMMENT, null);
+    var dead = [];
+    while(walker.nextNode()){ dead.push(walker.currentNode); }
+    dead.forEach(function(n){ if(n.parentNode){ n.parentNode.removeChild(n); } });
+  }
+
+  function removeByLocalName(root, names){
+    var set = {};
+    names.forEach(function(n){ set[n] = 1; });
+    allElements(root).forEach(function(el){
+      if(el !== root && set[el.localName] && el.parentNode){
+        el.parentNode.removeChild(el);
+      }
+    });
+  }
+
+  function stripEditorData(root){
+    allElements(root).forEach(function(el){
+      if(el !== root && isEditorNS(el.namespaceURI)){
+        if(el.parentNode){ el.parentNode.removeChild(el); }
+        return;
+      }
+      var attrs = Array.prototype.slice.call(el.attributes);
+      attrs.forEach(function(a){
+        if(isEditorNS(a.namespaceURI)){
+          el.removeAttributeNode(a);
+        } else if(a.namespaceURI === XMLNS_NS && isEditorNS(a.value)){
+          el.removeAttributeNode(a);
+        }
+      });
+    });
+  }
+
+  function minifyCss(css){
+    css = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    css = css.replace(/\s+/g, " ");
+    css = css.replace(/\s*([{}:;,])\s*/g, "$1");
+    css = css.replace(/;}/g, "}");
+    return css.trim();
+  }
+
+  function minifyStyles(root){
+    allElements(root).forEach(function(el){
+      if(el.localName === "style"){
+        el.textContent = minifyCss(el.textContent || "");
+      }
+      var inline = el.getAttribute ? el.getAttribute("style") : null;
+      if(inline){
+        var m = inline.replace(/\s*([:;])\s*/g, "$1").replace(/;+$/, "").replace(/\s+/g, " ").trim();
+        el.setAttribute("style", m);
+      }
+    });
+  }
+
+  function roundTree(root, prec){
+    allElements(root).forEach(function(el){
+      if(!el.attributes){ return; }
+      for(var i = 0; i < el.attributes.length; i++){
+        var a = el.attributes[i];
+        if(NUM_ATTRS[a.localName] || LIST_ATTRS[a.localName]){
+          var nv = roundNumbers(a.value, prec);
+          if(nv !== a.value){ a.value = nv; }
+        }
+      }
+    });
+  }
+
+  function inTextContext(node){
+    var p = node.parentNode;
+    while(p && p.nodeType === 1){
+      if(TEXT_ELEMENTS[p.localName]){ return true; }
+      p = p.parentNode;
+    }
+    return false;
+  }
+
+  function collapseWhitespace(root){
+    var walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var texts = [];
+    while(walker.nextNode()){ texts.push(walker.currentNode); }
+    texts.forEach(function(t){
+      if(inTextContext(t)){ return; }
+      if(/^\s*$/.test(t.nodeValue) && t.parentNode){
+        t.parentNode.removeChild(t);
+      }
+    });
+  }
+
+  function removeEmpty(root){
+    var changed = true;
+    while(changed){
+      changed = false;
+      allElements(root).forEach(function(el){
+        if(el === root){ return; }
+        if(el.localName !== "g" && el.localName !== "defs"){ return; }
+        if(el.getAttribute("id")){ return; } // may be referenced by <use> or url()
+        if(el.childElementCount === 0 && !/\S/.test(el.textContent || "")){
+          if(el.parentNode){ el.parentNode.removeChild(el); changed = true; }
+        }
+      });
+    }
+  }
+
+  function optimize(input, opt){
+    if(!input || !input.trim()){
+      throw new Error("Nothing to optimize. Paste or load some SVG markup first.");
+    }
+    var doc = new DOMParser().parseFromString(input, "image/svg+xml");
+    var perr = doc.getElementsByTagName("parsererror");
+    if(perr && perr.length){
+      var detail = (perr[0].textContent || "").replace(/\s+/g, " ").trim();
+      throw new Error("This does not parse as valid SVG or XML.\n" + detail);
+    }
+    var svg = doc.documentElement;
+    if(!svg || String(svg.nodeName).toLowerCase() !== "svg"){
+      throw new Error("The root element is <" + (svg ? svg.nodeName : "empty") + ">, not <svg>. Paste a complete SVG document.");
+    }
+
+    if(opt.comments){ removeComments(svg); }
+    if(opt.editor){ stripEditorData(svg); }
+    if(opt.metadata){ removeByLocalName(svg, ["metadata"]); }
+    if(opt.titledesc){ removeByLocalName(svg, ["title", "desc"]); }
+    if(opt.styleMin){ minifyStyles(svg); }
+    if(opt.precision >= 0){ roundTree(svg, opt.precision); }
+    if(opt.whitespace){ collapseWhitespace(svg); }
+    if(opt.empty){ removeEmpty(svg); }
+
+    // Serializing the root element (not the document) drops the XML
+    // declaration, any DOCTYPE, and comments that sit outside <svg>.
+    var out = new XMLSerializer().serializeToString(svg).trim();
+    return out;
+  }
+
+  // ---- UI wiring ----
+
+  var inputEl = $("input");
+  var outputEl = $("output");
+  var errorEl = $("error");
+  var statsEl = $("stats");
+  var previewsEl = $("previews");
+  var copyBtn = $("btn-copy");
+  var downloadBtn = $("btn-download");
+
+  function clampPrec(p){
+    if(isNaN(p)){ return 3; }
+    return Math.max(0, Math.min(8, p));
+  }
+
+  function readOptions(){
+    return {
+      comments: $("opt-comments").checked,
+      metadata: $("opt-metadata").checked,
+      titledesc: $("opt-titledesc").checked,
+      editor: $("opt-editor").checked,
+      whitespace: $("opt-whitespace").checked,
+      empty: $("opt-empty").checked,
+      styleMin: $("opt-style").checked,
+      precision: $("opt-round").checked ? clampPrec(parseInt($("opt-precision").value, 10)) : -1
+    };
+  }
+
+  function fmtBytes(n){
+    if(n < 1024){ return n + " B"; }
+    return (n / 1024).toFixed(1) + " KB";
+  }
+
+  function showError(msg){
+    errorEl.textContent = msg;
+    errorEl.classList.add("show");
+  }
+
+  function hideError(){
+    errorEl.classList.remove("show");
+    errorEl.textContent = "";
+  }
+
+  function setActions(on){
+    copyBtn.disabled = !on;
+    downloadBtn.disabled = !on;
+  }
+
+  function toDataUri(svg){
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  function updateSizeLabels(){
+    var inN = inputEl.value ? byteLen(inputEl.value) : 0;
+    var outN = outputEl.value ? byteLen(outputEl.value) : 0;
+    $("in-size").textContent = inN ? fmtBytes(inN) : "";
+    $("out-size").textContent = outN ? fmtBytes(outN) : "";
+  }
+
+  function run(){
+    hideError();
+    try{
+      var out = optimize(inputEl.value, readOptions());
+      outputEl.value = out;
+
+      var orig = byteLen(inputEl.value);
+      var opt = byteLen(out);
+      var saved = orig - opt;
+      var pct = orig > 0 ? (saved / orig * 100) : 0;
+
+      $("stat-orig").textContent = fmtBytes(orig);
+      $("stat-opt").textContent = fmtBytes(opt);
+      var savedEl = $("stat-saved");
+      savedEl.textContent = fmtBytes(Math.abs(saved)) + " (" + (saved >= 0 ? "-" : "+") + Math.abs(pct).toFixed(1) + "%)";
+      savedEl.className = "v " + (saved > 0 ? "good" : (saved < 0 ? "bad" : ""));
+      statsEl.classList.add("show");
+
+      $("prev-before").src = toDataUri(inputEl.value);
+      $("prev-after").src = toDataUri(out);
+      previewsEl.classList.add("show");
+
+      setActions(true);
+    }catch(e){
+      outputEl.value = "";
+      statsEl.classList.remove("show");
+      previewsEl.classList.remove("show");
+      setActions(false);
+      showError(e && e.message ? e.message : String(e));
+    }
+    updateSizeLabels();
+  }
+
+  function flash(btn, label){
+    var old = btn.textContent;
+    btn.textContent = label;
+    setTimeout(function(){ btn.textContent = old; }, 1200);
+  }
+
+  function fallbackCopy(text){
+    outputEl.removeAttribute("readonly");
+    outputEl.focus();
+    outputEl.select();
+    try{ document.execCommand("copy"); flash(copyBtn, "Copied"); }catch(e){}
+    outputEl.setAttribute("readonly", "readonly");
+    window.getSelection().removeAllRanges();
+  }
+
+  function copyOutput(){
+    var text = outputEl.value;
+    if(!text){ return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ flash(copyBtn, "Copied"); }, function(){ fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  function downloadOutput(){
+    var text = outputEl.value;
+    if(!text){ return; }
+    var blob = new Blob([text], {type: "image/svg+xml"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "optimized.svg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function clearAll(){
+    inputEl.value = "";
+    outputEl.value = "";
+    hideError();
+    statsEl.classList.remove("show");
+    previewsEl.classList.remove("show");
+    setActions(false);
+    updateSizeLabels();
+    inputEl.focus();
+  }
+
+  function readFile(file){
+    if(!file){ return; }
+    var reader = new FileReader();
+    reader.onload = function(){
+      inputEl.value = String(reader.result || "");
+      run();
+    };
+    reader.onerror = function(){ showError("Could not read that file."); };
+    reader.readAsText(file);
+  }
+
+  var SAMPLE = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!-- Exported from a vector editor -->',
+    '<svg xmlns="http://www.w3.org/2000/svg"',
+    '     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"',
+    '     xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.0.dtd"',
+    '     width="240" height="240" viewBox="0 0 240 240" version="1.1">',
+    '  <metadata id="metadata7">',
+    '    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF>',
+    '  </metadata>',
+    '  <sodipodi:namedview inkscape:zoom="1.23456789" inkscape:current-layer="layer1"/>',
+    '  <title>Blue badge</title>',
+    '  <desc>An example graphic with editor cruft</desc>',
+    '  <defs></defs>',
+    '  <g inkscape:label="Layer 1" inkscape:groupmode="layer" transform="translate(0.000000,0.000000)">',
+    '    <circle cx="120.0000000" cy="120.0000000" r="90.4837291029" fill="#3b82f6"/>',
+    '    <path d="M60.1234567,120.9876543 C60.1234567,86.7654321 87.7654321,59.1234567 120.0000000,59.0000000"',
+    '          stroke="#1e3a8a" stroke-width="6.000000" fill="none"/>',
+    '  </g>',
+    '</svg>'
+  ].join("\n");
+
+  function loadSample(){
+    inputEl.value = SAMPLE;
+    run();
+  }
+
+  // Buttons
+  $("btn-optimize").addEventListener("click", run);
+  copyBtn.addEventListener("click", copyOutput);
+  downloadBtn.addEventListener("click", downloadOutput);
+  $("btn-sample").addEventListener("click", loadSample);
+  $("btn-clear").addEventListener("click", clearAll);
+
+  // Re-run when an option changes and there is something to work on.
+  ["opt-comments","opt-metadata","opt-editor","opt-whitespace","opt-empty",
+   "opt-style","opt-titledesc","opt-round","opt-precision"].forEach(function(id){
+    $(id).addEventListener("change", function(){
+      if(inputEl.value.trim()){ run(); }
+    });
+  });
+
+  inputEl.addEventListener("input", updateSizeLabels);
+
+  // File input
+  $("file").addEventListener("change", function(e){
+    if(e.target.files && e.target.files[0]){ readFile(e.target.files[0]); }
+  });
+
+  // Drag and drop
+  var dz = $("dropzone");
+  ["dragenter","dragover"].forEach(function(ev){
+    dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add("drag"); });
+  });
+  ["dragleave","drop"].forEach(function(ev){
+    dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove("drag"); });
+  });
+  dz.addEventListener("drop", function(e){
+    if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]){
+      readFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  updateSizeLabels();
+})();
+</script>
+</body>
+</html>
